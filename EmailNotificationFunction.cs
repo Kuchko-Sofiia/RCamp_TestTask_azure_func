@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Mail;
+using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
@@ -15,28 +16,34 @@ namespace ReenbitCamp_TestTask_azure_func
     [StorageAccount("BlobConnectionString")]
     public class EmailNotificationFunction
     {
+        private readonly IConfiguration _configuration;
         private readonly IEmailSender _emailSenderService;
 
-        public EmailNotificationFunction(IEmailSender emailSender)
+        public EmailNotificationFunction(IConfiguration configuration, IEmailSender emailSender)
         {
+            _configuration = configuration;
             _emailSenderService = emailSender;
         }
         [FunctionName("EmailNotificationFunction")]
-        public void Run([BlobTrigger("docxfiles/{name}")]Stream myBlob, IDictionary<string, string> metaData, string name, ILogger log)
+        public async Task Run([BlobTrigger("docxfiles/{name}")]Stream myBlob, string blobExtension, IDictionary<string, string> metaData, BlobProperties properties, string name, ILogger log)
         {
             log.LogInformation($"Trigger triggered email notification function started its work");
 
             try
             {
-                string toEmailAddress = metaData.ContainsKey("emailAddress") ? metaData["emailAddress"] : null;
-
-                if (toEmailAddress != null)
+                if (metaData.TryGetValue("emailAddress", out string toEmailAddress))
                 {
-                    var subject = "File uploaded successfully!";
-                    var plainTextContent = $"The file {name} has been uploaded successfully to the blob container.";
-                    var htmlContent = $"The file <strong>{name}</strong> has been uploaded successfully to the blob container.";
+                    //var plainTextContent = $"The file {name} has been uploaded successfully to the blob container.";
+                    //var htmlContent = $"The file <strong>{name}</strong> has been uploaded successfully to the blob container.";
+                    var dynamicTemplateData = new Dictionary<string, string>
+                    {
+                        { "toEmailAddress", toEmailAddress },
+                        { "fileName", name },
+                        { "fileExtension", blobExtension },
+                        { "dateTime", properties.Created.ToString()}
+                    };
 
-                    _emailSenderService.SendNotificationEmail("zefirova.sofiia@gmail.com", toEmailAddress, subject, plainTextContent, htmlContent);
+                    await _emailSenderService.SendNotificationEmailAsync(_configuration["SenderEmail"], toEmailAddress, _configuration["TemplateId"], dynamicTemplateData);
 
                     log.LogInformation($"C# Blob trigger function Processed blob\n Name:{name} \n Size: {myBlob.Length} Bytes");
                 }

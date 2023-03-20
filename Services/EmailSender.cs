@@ -21,13 +21,13 @@ namespace ReenbitCamp_TestTask_azure_func.Services
             _sendGridClient = new SendGridClient(sendGridApiKey);
         }
 
-        public void SendNotificationEmail(string fromEmailAddress, string toEmailAddress, string subject, string plainTextContent, string htmlContent)
+        public async Task SendNotificationEmailAsync(string fromEmailAddress, string toEmailAddress, string templateId, Dictionary<string, string> dynamicTemplateData)
         {
             var from = new EmailAddress(fromEmailAddress);
             var to = new EmailAddress(toEmailAddress);
-            var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
+            var msg = MailHelper.CreateSingleTemplateEmail(from, to, templateId, dynamicTemplateData);
 
-            var response = _sendGridClient.SendEmailAsync(msg).Result;
+            var response = await _sendGridClient.SendEmailAsync(msg);
         }
     }
 }
