@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "ReenbitCamp_TestTask_azure_func": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7266",
+      "launchBrowser": false
+    }
+  }
+}
