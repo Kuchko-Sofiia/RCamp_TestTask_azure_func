@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Mail;
+using System.Reflection.Metadata;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Azure.WebJobs;
@@ -25,7 +26,7 @@ namespace ReenbitCamp_TestTask_azure_func
             _emailSenderService = emailSender;
         }
         [FunctionName("EmailNotificationFunction")]
-        public async Task Run([BlobTrigger("docxfiles/{name}")]Stream myBlob, string blobExtension, IDictionary<string, string> metaData, BlobProperties properties, string name, ILogger log)
+        public async Task Run([BlobTrigger("docxfiles/{name}")]Stream myBlob, IDictionary<string, string> metaData, string name, ILogger log)
         {
             log.LogInformation($"Trigger triggered email notification function started its work");
 
@@ -33,14 +34,13 @@ namespace ReenbitCamp_TestTask_azure_func
             {
                 if (metaData.TryGetValue("emailAddress", out string toEmailAddress))
                 {
-                    //var plainTextContent = $"The file {name} has been uploaded successfully to the blob container.";
-                    //var htmlContent = $"The file <strong>{name}</strong> has been uploaded successfully to the blob container.";
+
                     var dynamicTemplateData = new Dictionary<string, string>
                     {
                         { "toEmailAddress", toEmailAddress },
                         { "fileName", name },
-                        { "fileExtension", blobExtension },
-                        { "dateTime", properties.Created.ToString()}
+                        { "fileExtension", Path.GetExtension(name) },
+                        { "dateTime", DateTime.Now.ToString()}
                     };
 
                     await _emailSenderService.SendNotificationEmailAsync(_configuration["SenderEmail"], toEmailAddress, _configuration["TemplateId"], dynamicTemplateData);
